@@ -1,25 +1,29 @@
-const AWS = require("aws-sdk");
-const sqs = new AWS.SQS();
+const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
+
+const sqs = new SQSClient();
 
 const QUEUE_URL = process.env.QUEUE_URL;
 
 exports.handler = async (event) => {
   try {
-    const body = JSON.parse(event.body); // { pedidoId, producto, cantidad }
+    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
 
-    const params = {
+    const command = new SendMessageCommand({
       QueueUrl: QUEUE_URL,
       MessageBody: JSON.stringify(body),
-    };
+    });
 
-    await sqs.sendMessage(params).promise();
+    await sqs.send(command);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Pedido enviado a la cola", pedido: body }),
+      body: JSON.stringify({
+        message: "Pedido enviado a la cola",
+        pedido: body,
+      }),
     };
   } catch (err) {
     console.error("Error en Producer:", err);
-    return { statusCode: 500, body: JSON.stringify({ error: "Error enviando pedido" }) };
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };

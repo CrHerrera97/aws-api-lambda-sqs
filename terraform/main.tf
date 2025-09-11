@@ -43,7 +43,7 @@ resource "aws_lambda_function" "producer" {
 
   environment {
     variables = {
-      QUEUE_URL = aws_sqs_queue.pedidos.id
+      QUEUE_URL = aws_sqs_queue.pedidos.url
     }
   }
 }
@@ -57,7 +57,7 @@ resource "aws_apigatewayv2_api" "api" {
 resource "aws_apigatewayv2_integration" "producer_integration" {
   api_id           = aws_apigatewayv2_api.api.id
   integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.producer.invoke_arn
+  integration_uri = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/${aws_lambda_function.producer.arn}/invocations"
   integration_method = "POST"
 }
 
@@ -75,9 +75,9 @@ resource "aws_lambda_permission" "api_gateway" {
   source_arn    = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
 }
 
-resource "aws_apigatewayv2_stage" "default" {
+resource "aws_apigatewayv2_stage" "prod" {
   api_id      = aws_apigatewayv2_api.api.id
-  name        = "$default"
+  name        = "prod"
   auto_deploy = true
 }
 
