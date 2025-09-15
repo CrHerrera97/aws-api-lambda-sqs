@@ -97,3 +97,55 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = aws_sqs_queue.pedidos.arn
   function_name    = aws_lambda_function.consumer.arn
 }
+
+# --- DynamoDB Table ---
+
+resource "aws_dynamodb_table" "pedidos" {
+  name         = "Pedidos"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+  attribute {
+    name = "id"
+    type = "S"
+  }
+}
+
+# Permisos en dynamoDB para la Lambda Consumer
+
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name = "lambda-dynamodb-policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Scan",
+        "dynamodb:Query"
+      ]
+      Resource = aws_dynamodb_table.pedidos.arn
+    }]
+  })
+}
+
+resource "aws_lambda_function" "consumer" {
+  function_name = "consumer-pedidos"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "app.handler"
+  runtime       = "nodejs18.x"
+
+  filename         = "${path.module}/../consumer.zip"
+  source_code_hash = filebase64sha256("${path.module}/../consumer.zip")
+
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.pedidos.name
+    }
+  }
+  
+}
