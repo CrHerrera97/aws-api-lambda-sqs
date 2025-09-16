@@ -81,17 +81,6 @@ resource "aws_apigatewayv2_stage" "prod" {
   auto_deploy = true
 }
 
-# --- Consumer Lambda ---
-resource "aws_lambda_function" "consumer" {
-  function_name = "consumer-pedidos"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "app.handler"
-  runtime       = "nodejs18.x"
-
-  filename         = "${path.module}/../consumer.zip"
-  source_code_hash = filebase64sha256("${path.module}/../consumer.zip")
-}
-
 # --- Vincular SQS a Consumer ---
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = aws_sqs_queue.pedidos.arn
